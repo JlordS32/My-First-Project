@@ -176,13 +176,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4eb3c333dd0bb404abee51561cb67c4a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _initialGravityScale: 1
   _movementSpeed: 8
-  _jumpForce: 5
-  _rayLength: 1
+  _jumpForce: 13
   _groundLayer:
     serializedVersion: 2
     m_Bits: 512
+  _fallingSpeed: 3
 --- !u!95 &1636323176839432626
 Animator:
   serializedVersion: 7

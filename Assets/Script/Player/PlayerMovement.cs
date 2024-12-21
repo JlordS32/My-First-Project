@@ -6,11 +6,10 @@ public class PlayerMovement : MonoBehaviour
 {
     // Serialisable fields
     [Header("Player Parameters")]
-    [SerializeField] private float _initialGravityScale;
     [SerializeField] private float _movementSpeed;
     [SerializeField] private float _jumpForce;
-    [SerializeField] private float _rayLength = 0.1f;
     [SerializeField] private LayerMask _groundLayer;
+    [SerializeField] private float _fallingSpeed;
 
     // References
     private Rigidbody2D _body;
@@ -19,13 +18,18 @@ public class PlayerMovement : MonoBehaviour
 
     // Variables
     private float _horizontalInput;
+    private int _jumpCounter;
+    private readonly float _rayLength = 0.1f;
+    private readonly int _maxJump = 1;
+    private float _initialGravityScale;
 
     private void Awake()
     {
         _body = GetComponent<Rigidbody2D>();
         _animator = GetComponent<Animator>();
         _collider = GetComponent<BoxCollider2D>();
-        _body.gravityScale = _initialGravityScale;
+        _initialGravityScale = _body.gravityScale;
+        _fallingSpeed = _initialGravityScale * 1.5f;
     }
 
     private void Update()
@@ -37,6 +41,8 @@ public class PlayerMovement : MonoBehaviour
         */
         // Move player and flip character
         FlipCharacter(_horizontalInput);
+        _body.linearVelocity = new Vector2(_horizontalInput * _movementSpeed, _body.linearVelocityY);
+        _animator.SetBool("running", _horizontalInput != 0);
 
         // Adjustable jump
         if (Input.GetKeyUp(KeyCode.Space) && _body.linearVelocityY > 0)
@@ -44,32 +50,38 @@ public class PlayerMovement : MonoBehaviour
             _body.linearVelocity = new Vector2(_body.linearVelocityX, _body.linearVelocityY / 2);
         }
 
-        if (onWall() && !isGrounded()){
-            Debug.Log("I'm stuck in the wall");
-            _body.linearVelocity = new Vector2(0, _body.linearVelocityY / 2);
-        } else {
-            _body.linearVelocity = new Vector2(_horizontalInput * _movementSpeed, _body.linearVelocityY);
+        // Adjust falling behavior
+        if (_body.linearVelocityY < 0 && !isGrounded()) // Falling
+        {
+            _animator.SetBool("falling", true);
+            _body.gravityScale = _fallingSpeed; // Apply falling speed directly
         }
-
-        HandleAnimation();
+        else if (_body.linearVelocityY > 0 && !isGrounded()) // Jumping up
+        {
+            _animator.SetTrigger("jump");
+            _animator.SetBool("falling", false);
+        }
+        else // Grounded
+        {
+            _animator.SetBool("falling", false);
+            _body.gravityScale = _initialGravityScale; // Ensure gravity is normal when grounded
+            _jumpCounter = 0;
+        }
 
         /*
             JUMP LOGIC
         */
         if (Input.GetKeyDown(KeyCode.Space))
         {
+            _jumpCounter++;
             Jump();
         }
     }
 
-    private void HandleAnimation()
-    {
-        _animator.SetBool("running", _horizontalInput != 0);
-        _animator.SetBool("grounded", isGrounded());
-    }
-
     private void Jump()
     {
+        if (_jumpCounter > _maxJump) return;
+
         _body.linearVelocity = new Vector2(_body.linearVelocityX, _jumpForce);
     }
 
@@ -90,7 +102,7 @@ public class PlayerMovement : MonoBehaviour
 
     private bool onWall()
     {
-        RaycastHit2D raycastHit = Physics2D.BoxCast(_collider.bounds.center, _collider.bounds.size, 0, new Vector3(Mathf.Sign(transform.localScale.x), 0, 0), _rayLength, _groundLayer);
+        RaycastHit2D raycastHit = Physics2D.BoxCast(_collider.bounds.center, _collider.bounds.size, 0, new Vector2(transform.localScale.x, 0), _rayLength, _groundLayer);
         return raycastHit.collider != null;
     }
     #endregion
