@@ -1,10 +1,9 @@
-using System.Collections;
 using UnityEngine;
 
 public class BackgroundController : MonoBehaviour
 {
-    [SerializeField] private GameObject _camera;
-    [SerializeField] private float _parallaxEffect;
+    [SerializeField] private GameObject _camera; // Reference to the camera
+    [SerializeField] private float _parallaxEffect; // Parallax effect multiplier
     private float _startPosX, _length;
 
     private void Start()
@@ -13,21 +12,21 @@ public class BackgroundController : MonoBehaviour
         _length = GetComponent<SpriteRenderer>().bounds.size.x;
     }
 
-    private void Update()
+    private void LateUpdate()
     {
-        // Calculate distance relative to cam pos and parallax effect
+        // Use LateUpdate to minimize visual discrepancies caused by timing differences
+        float temp = _camera.transform.position.x * (1 - _parallaxEffect);
         float distance = _camera.transform.position.x * _parallaxEffect;
-        float movement = _camera.transform.position.x * (1 - _parallaxEffect);
 
-        // Update new distance
+        // Update the object's position based on parallax calculation
         transform.position = new Vector3(_startPosX + distance, transform.position.y, transform.position.z);
 
-        // Infinite scrolling
-        if (movement > _startPosX + _length)
+        // Infinite scrolling logic
+        if (temp > _startPosX + _length)
         {
             _startPosX += _length * 2;
         }
-        else if (movement < _startPosX - _length)
+        else if (temp < _startPosX - _length)
         {
             _startPosX -= _length * 2;
         }
