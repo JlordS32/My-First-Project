@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 // TODO: Add wall jump logic
@@ -10,7 +11,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float _jumpForce;
     [SerializeField] private LayerMask _groundLayer;
     [SerializeField] private float _fallingSpeed;
-    [SerializeField] private int _jumpCounterMax = 1;
+    [SerializeField] private float _movementLagInSeconds = 0.1f;
 
     // References
     private Rigidbody2D _body;
@@ -19,9 +20,9 @@ public class PlayerMovement : MonoBehaviour
 
     // Variables
     private float _horizontalInput;
-    private int _jumpCounter;
     private readonly float _rayLength = 0.01f;
     private float _initialGravityScale;
+    private bool _isMovementDisabled = false;
 
     private void Awake()
     {
@@ -34,19 +35,20 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
+        if (_isMovementDisabled) return;
+
         _horizontalInput = Input.GetAxis("Horizontal");
 
         /*
             MOVE CHARACTER LOGIC
         */
 
-        if (isGrounded()) Debug.Log("Grounded");
-
         // Move player and flip character
         FlipCharacter(_horizontalInput);
         if (!onWall() || isGrounded()) // Allow movement only if not on a wall or grounded
         {
             _body.linearVelocity = new Vector2(_horizontalInput * _movementSpeed, _body.linearVelocity.y);
+            _animator.SetBool("grounded", true);
         }
         else if (onWall() && !isGrounded() && _body.linearVelocity.y > 0) // Stuck on wall and jumping
         {
@@ -66,17 +68,19 @@ public class PlayerMovement : MonoBehaviour
         if (_body.linearVelocity.y < 0 && !isGrounded()) // Falling
         {
             _animator.SetBool("falling", true);
-            _body.gravityScale = _fallingSpeed; // Apply falling speed directly
+            _animator.SetBool("grounded", false);
+            _body.gravityScale = _fallingSpeed;
         }
-        else if (_body.linearVelocity.y > 0 && !isGrounded()) // Jumping up
+        else if (_body.linearVelocity.y > 0 && !isGrounded())
         {
             _animator.SetTrigger("jump");
             _animator.SetBool("falling", false);
+            _animator.SetBool("grounded", false);
         }
         else // Grounded
         {
             _animator.SetBool("falling", false);
-            _body.gravityScale = _initialGravityScale; // Ensure gravity is normal when grounded
+            _body.gravityScale = _initialGravityScale;
         }
 
         /*
@@ -96,7 +100,6 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-
     private void FlipCharacter(float direction)
     {
         if (direction > 0.01f)
@@ -104,6 +107,43 @@ public class PlayerMovement : MonoBehaviour
         else if (direction < -0.01f)
             transform.localScale = new Vector3(-1, 1, 1);
     }
+
+    /// <summary>
+    /// Stops all player movement temporarily for a specified duration.
+    /// </summary>
+    /// <remarks>
+    /// This method must be called using <c>StartCoroutine</c> to work correctly, 
+    /// as it uses a coroutine to handle the delay.
+    /// </remarks> 
+    public IEnumerator StopMovement()
+    {   
+        if (!isGrounded()) yield return new WaitForSeconds(0);
+
+        _isMovementDisabled = true;
+        Debug.Log("Hello from StopMovement");
+        // Save current gravity scale to restore it later
+        float originalGravityScale = _body.gravityScale;
+
+        // Completely stop movement
+        _body.linearVelocity = Vector2.zero;
+        _horizontalInput = 0;
+
+        // Disable gravity to prevent unintended falling
+        _body.gravityScale = 0;
+
+        // Reset animations to idle
+        _animator.SetBool("running", false);
+        _animator.SetBool("falling", false);
+        _animator.SetBool("grounded", true);
+        _animator.ResetTrigger("jump");
+
+        yield return new WaitForSeconds(_movementLagInSeconds);
+
+        // Restore gravity and allow movement
+        _body.gravityScale = originalGravityScale;
+        _isMovementDisabled = false;
+    }
+
 
     #region Detecting Ground
     private bool isGrounded()
