@@ -73,7 +73,6 @@ public class PlayerMovement : MonoBehaviour
         }
         else if (_body.linearVelocity.y > 0 && !isGrounded())
         {
-            _animator.SetTrigger("jump");
             _animator.SetBool("falling", false);
             _animator.SetBool("grounded", false);
         }
@@ -120,22 +119,17 @@ public class PlayerMovement : MonoBehaviour
         if (!isGrounded()) yield return new WaitForSeconds(0);
 
         _isMovementDisabled = true;
-        Debug.Log("Hello from StopMovement");
         // Save current gravity scale to restore it later
         float originalGravityScale = _body.gravityScale;
 
         // Completely stop movement
-        _body.linearVelocity = Vector2.zero;
+        _body.linearVelocity = new Vector2(0, _body.linearVelocity.y);
         _horizontalInput = 0;
-
-        // Disable gravity to prevent unintended falling
-        _body.gravityScale = 0;
 
         // Reset animations to idle
         _animator.SetBool("running", false);
         _animator.SetBool("falling", false);
         _animator.SetBool("grounded", true);
-        _animator.ResetTrigger("jump");
 
         yield return new WaitForSeconds(_movementLagInSeconds);
 

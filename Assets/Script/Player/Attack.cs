@@ -23,8 +23,8 @@ public class Attack : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0) && attackTimer >= _attackCooldown)
         {
-            StartCoroutine(_playerMovement.StopMovement());
             _animator.SetTrigger("attack");
+            StartCoroutine(_playerMovement.StopMovement());
             attackTimer = 0; // Reset cooldown
         }
     }
